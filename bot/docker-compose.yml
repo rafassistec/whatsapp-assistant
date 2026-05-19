@@ -1,6 +1,6 @@
 services:
   evolution-api:
-    image: atendai/evolution-api:v2.2.0
+    image: evoapicloud/evolution-api:v2.3.7
     container_name: evolution-api
     restart: always
     ports:
@@ -33,6 +33,10 @@ services:
       WEBHOOK_GLOBAL_URL: http://host.docker.internal:${PORT}${WEBHOOK_PATH}
       WEBHOOK_GLOBAL_WEBHOOK_BY_EVENTS: "false"
       WEBHOOK_EVENTS_MESSAGES_UPSERT: "true"
+
+      # Cache (usar local em vez de Redis)
+      CACHE_REDIS_ENABLED: "false"
+      CACHE_LOCAL_ENABLED: "true"
 
       # Logs
       LOG_LEVEL: ERROR,WARN,INFO

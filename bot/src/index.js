@@ -2,12 +2,17 @@ import 'dotenv/config';
 import Fastify from 'fastify';
 import { handleIncomingMessage } from './handler.js';
 
-const fastify = Fastify({ logger: { level: 'info' } });
+const fastify = Fastify({
+  logger: { level: 'info' },
+  bodyLimit: 50 * 1024 * 1024,
+});
 
 fastify.get('/health', async () => ({ status: 'ok', uptime: process.uptime() }));
 
 fastify.post(process.env.WEBHOOK_PATH || '/webhook', async (request, reply) => {
   const event = request.body;
+
+  console.log(`[event] ${event?.event || 'unknown'}`);
 
   if (event?.event !== 'messages.upsert') {
     return reply.code(200).send({ ignored: 'not-a-message' });
