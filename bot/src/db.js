@@ -18,6 +18,12 @@ db.exec(`
   );
   CREATE INDEX IF NOT EXISTS idx_messages_chat_time
     ON messages (chat_jid, created_at);
+
+  CREATE TABLE IF NOT EXISTS google_tokens (
+    user_id TEXT PRIMARY KEY,
+    tokens_json TEXT NOT NULL,
+    updated_at INTEGER NOT NULL
+  );
 `);
 
 const insertStmt = db.prepare(
@@ -38,4 +44,26 @@ export function addMessage(chatJid, role, content) {
 export function getRecentMessages(chatJid, limit) {
   const rows = recentStmt.all(chatJid, limit);
   return rows.reverse();
+}
+
+const upsertTokensStmt = db.prepare(
+  `INSERT INTO google_tokens (user_id, tokens_json, updated_at)
+   VALUES (?, ?, ?)
+   ON CONFLICT(user_id) DO UPDATE SET
+     tokens_json = excluded.tokens_json,
+     updated_at = excluded.updated_at`
+);
+
+const getTokensStmt = db.prepare(
+  `SELECT tokens_json FROM google_tokens WHERE user_id = ?`
+);
+
+export function saveGoogleTokens(userId, tokens) {
+  upsertTokensStmt.run(userId, JSON.stringify(tokens), Date.now());
+}
+
+export function loadGoogleTokens(userId) {
+  const row = getTokensStmt.get(userId);
+  if (!row) return null;
+  return JSON.parse(row.tokens_json);
 }
