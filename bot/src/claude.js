@@ -2,14 +2,16 @@ import Anthropic from '@anthropic-ai/sdk';
 
 const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
-export async function askClaude(history, userText) {
+const VISION_MODEL = process.env.CLAUDE_VISION_MODEL || 'claude-sonnet-4-6';
+
+export async function askClaude(history, userContent, { hasImage = false } = {}) {
   const messages = [
     ...history.map((m) => ({ role: m.role, content: m.content })),
-    { role: 'user', content: userText },
+    { role: 'user', content: userContent },
   ];
 
   const response = await client.messages.create({
-    model: process.env.CLAUDE_MODEL || 'claude-haiku-4-5-20251001',
+    model: hasImage ? VISION_MODEL : (process.env.CLAUDE_MODEL || 'claude-haiku-4-5-20251001'),
     max_tokens: 1024,
     system: process.env.SYSTEM_PROMPT,
     messages,

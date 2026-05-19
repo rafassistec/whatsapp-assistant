@@ -1,5 +1,5 @@
 import { askClaude } from './claude.js';
-import { sendText } from './evolution.js';
+import { sendText, downloadMediaBase64 } from './evolution.js';
 import { addMessage, getRecentMessages } from './db.js';
 
 const sentMessageIds = new Set();
@@ -24,6 +24,23 @@ function normalizeBrPhone(phone) {
 
 function isOwner(phone) {
   return normalizeBrPhone(phone) === normalizeBrPhone(process.env.OWNER_PHONE);
+}
+
+function extractMessageContent(msg) {
+  const m = msg.message || {};
+
+  if (m.conversation) return { kind: 'text', text: m.conversation };
+  if (m.extendedTextMessage?.text) return { kind: 'text', text: m.extendedTextMessage.text };
+
+  if (m.imageMessage) {
+    return {
+      kind: 'image',
+      mimeType: m.imageMessage.mimetype || 'image/jpeg',
+      caption: m.imageMessage.caption || '',
+    };
+  }
+
+  return { kind: 'unsupported' };
 }
 
 export async function handleIncomingMessage(event) {
@@ -54,17 +71,14 @@ export async function handleIncomingMessage(event) {
     return;
   }
 
-  const text =
-    msg.message?.conversation ||
-    msg.message?.extendedTextMessage?.text ||
-    null;
+  const content = extractMessageContent(msg);
 
-  if (!text) {
-    console.log(`[skip] non-text from ${phone}`);
+  if (content.kind === 'unsupported') {
+    console.log(`[skip] unsupported message type from ${phone}`);
     return;
   }
 
-  if (fromMe && /^\[(clawdbot|claudbot)\]/i.test(text)) {
+  if (content.kind === 'text' && fromMe && /^\[(clawdbot|claudbot)\]/i.test(content.text)) {
     console.log(`[skip] other-bot reply detected`);
     return;
   }
@@ -72,11 +86,39 @@ export async function handleIncomingMessage(event) {
   const memoryWindow = Number(process.env.MEMORY_WINDOW || 30);
   const history = getRecentMessages(remoteJid, memoryWindow);
 
-  console.log(`[in] ${phone}${fromMe ? ' (self)' : ''} [${history.length} msgs ctx]: ${text}`);
+  let userMessageForClaude;
+  let userMessageForMemory;
+  let hasImage = false;
 
-  addMessage(remoteJid, 'user', text);
+  if (content.kind === 'text') {
+    userMessageForClaude = content.text;
+    userMessageForMemory = content.text;
+    console.log(`[in] ${phone}${fromMe ? ' (self)' : ''} [${history.length} ctx]: ${content.text}`);
+  } else if (content.kind === 'image') {
+    console.log(`[in] ${phone}${fromMe ? ' (self)' : ''} [${history.length} ctx]: <imagem>${content.caption ? ' ' + content.caption : ''}`);
 
-  const reply = await askClaude(history, text);
+    const media = await downloadMediaBase64(msg);
+    const base64 = media.base64 || media;
+    if (!base64 || typeof base64 !== 'string') {
+      console.log(`[error] could not download image`);
+      await sendText(remoteJid, '(não consegui baixar a imagem, tenta de novo?)');
+      return;
+    }
+
+    const promptText = content.caption?.trim() || 'O que tem nessa imagem? Responda de forma útil e objetiva.';
+
+    userMessageForClaude = [
+      { type: 'image', source: { type: 'base64', media_type: content.mimeType, data: base64 } },
+      { type: 'text', text: promptText },
+    ];
+
+    userMessageForMemory = `[imagem]${content.caption ? ' ' + content.caption : ''}`;
+    hasImage = true;
+  }
+
+  addMessage(remoteJid, 'user', userMessageForMemory);
+
+  const reply = await askClaude(history, userMessageForClaude, { hasImage });
 
   addMessage(remoteJid, 'assistant', reply);
 
