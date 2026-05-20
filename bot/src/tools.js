@@ -1,7 +1,8 @@
 import { calendarTools } from './tools-calendar.js';
 import { gmailTools } from './tools-gmail.js';
+import { sheetsTools } from './tools-sheets.js';
 
-const allTools = [...calendarTools, ...gmailTools];
+const allTools = [...calendarTools, ...gmailTools, ...sheetsTools];
 
 export const toolDefinitions = allTools.map((t) => ({
   name: t.name,

@@ -14,7 +14,8 @@ Construído colaborativamente com Claude Code.
 | 🖼️ **Análise de imagens** | Envie uma foto (com ou sem legenda) — descrição, OCR de nota fiscal, leitura de tela de erro, identificação de objetos |
 | 📅 **Google Calendar** | "o que tenho amanhã?", "agenda reunião com fulano sexta 14h", "cancela o evento das 10h" |
 | 📧 **Gmail** | "tem email novo?", "lê o último email do banco", "responde pro Pedro confirmando" |
-| 🧠 **Memória persistente** | SQLite — janela rolante de 30 mensagens por chat |
+| 📊 **Google Sheets** | "lê a planilha de gastos", "adiciona R$45 de almoço hoje", "cria uma planilha de tarefas" |
+| 🧠 **Memória persistente** | SQLite — janela rolante de 60 mensagens por chat |
 
 ---
 
@@ -43,6 +44,7 @@ Bot Fastify (porta 3000)
        ├── db.js       → SQLite (mensagens + tokens OAuth)
        ├── tools-calendar.js → 4 tools de Calendar
        ├── tools-gmail.js    → 3 tools de Gmail
+       ├── tools-sheets.js   → 6 tools de Sheets (+ Drive read)
        └── google-auth.js    → OAuth 2.0 flow
 ```
 
@@ -114,6 +116,7 @@ Mais detalhes no [README do bot](./bot/README.md).
 - [ ] **Fase 3** — Transcrição de áudios (OpenAI Whisper)
 - [x] **Fase 4** — Análise de imagens (Claude Vision)
 - [x] **Fase 5** — Google Calendar + Gmail (OAuth 2.0)
+- [x] **Extra** — Google Sheets (listar, ler, adicionar, atualizar, criar)
 - [ ] **Fase 6** — Deploy em VPS (Hostinger + PM2)
 
 ---
@@ -150,7 +153,8 @@ Mais detalhes no [README do bot](./bot/README.md).
 │   │   ├── google-auth.js
 │   │   ├── tools.js
 │   │   ├── tools-calendar.js
-│   │   └── tools-gmail.js
+│   │   ├── tools-gmail.js
+│   │   └── tools-sheets.js
 │   ├── docker-compose.yml
 │   ├── package.json
 │   └── README.md
