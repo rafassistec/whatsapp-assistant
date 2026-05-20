@@ -11,6 +11,7 @@ Construído colaborativamente com Claude Code.
 | Recurso | Como usar |
 |---------|-----------|
 | 💬 **Conversa contextual** | Mande mensagem no self-chat do WhatsApp — Claude responde lembrando do contexto recente |
+| 🎤 **Áudios transcritos** | Grave um áudio — Whisper transcreve e Claude responde (ótimo pra dirigir/cozinhar) |
 | 🖼️ **Análise de imagens** | Envie uma foto (com ou sem legenda) — descrição, OCR de nota fiscal, leitura de tela de erro, identificação de objetos |
 | 📅 **Google Calendar** | "o que tenho amanhã?", "agenda reunião com fulano sexta 14h", "cancela o evento das 10h" |
 | 📧 **Gmail** | "tem email novo?", "lê o último email do banco", "responde pro Pedro confirmando" |
@@ -25,7 +26,8 @@ Construído colaborativamente com Claude Code.
 - **Fastify** — servidor HTTP que recebe webhooks
 - **[Evolution API](https://github.com/EvolutionAPI/evolution-api) v2.3.7** — gateway WhatsApp (Docker)
 - **[@anthropic-ai/sdk](https://github.com/anthropics/anthropic-sdk-typescript)** — cliente Claude
-- **[googleapis](https://github.com/googleapis/google-api-nodejs-client)** — Calendar + Gmail
+- **OpenAI Whisper** — transcrição de áudio (via REST)
+- **[googleapis](https://github.com/googleapis/google-api-nodejs-client)** — Calendar + Gmail + Sheets + Drive
 - **node:sqlite** — banco built-in (Node 22+), sem dependência nativa
 - **PostgreSQL 16** — usado internamente pelo Evolution API
 
@@ -39,8 +41,9 @@ WhatsApp (celular)
 Evolution API (Docker, porta 8080)
        ↓ webhook em messages.upsert
 Bot Fastify (porta 3000)
-       ├── handler.js  → roteia/filtra mensagens
+       ├── handler.js  → roteia/filtra mensagens (texto/imagem/áudio)
        ├── claude.js   → tool-use loop com Sonnet 4.6
+       ├── whisper.js  → transcrição via OpenAI
        ├── db.js       → SQLite (mensagens + tokens OAuth)
        ├── tools-calendar.js → 4 tools de Calendar
        ├── tools-gmail.js    → 3 tools de Gmail
@@ -113,7 +116,7 @@ Mais detalhes no [README do bot](./bot/README.md).
 
 - [x] **Fase 1** — MVP de conversa texto
 - [x] **Fase 2** — Memória persistente (SQLite)
-- [ ] **Fase 3** — Transcrição de áudios (OpenAI Whisper)
+- [x] **Fase 3** — Transcrição de áudios (OpenAI Whisper)
 - [x] **Fase 4** — Análise de imagens (Claude Vision)
 - [x] **Fase 5** — Google Calendar + Gmail (OAuth 2.0)
 - [x] **Extra** — Google Sheets (listar, ler, adicionar, atualizar, criar)
@@ -124,6 +127,7 @@ Mais detalhes no [README do bot](./bot/README.md).
 ## 💰 Custos esperados (uso pessoal moderado)
 
 - **Claude API** (~30 msgs/dia, Sonnet 4.6): R$30–80/mês
+- **OpenAI Whisper** ($0.006/min): ~R$5/mês com uso moderado de áudio
 - **Google APIs**: gratuito até quotas generosas
 - **Hostinger VPS** (quando deployar): R$23–50/mês
 
@@ -151,6 +155,7 @@ Mais detalhes no [README do bot](./bot/README.md).
 │   │   ├── db.js
 │   │   ├── evolution.js
 │   │   ├── google-auth.js
+│   │   ├── whisper.js
 │   │   ├── tools.js
 │   │   ├── tools-calendar.js
 │   │   ├── tools-gmail.js

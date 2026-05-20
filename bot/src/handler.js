@@ -1,6 +1,7 @@
 import { askClaude } from './claude.js';
 import { sendText, downloadMediaBase64 } from './evolution.js';
 import { addMessage, getRecentMessages } from './db.js';
+import { transcribeAudio } from './whisper.js';
 
 const sentMessageIds = new Set();
 const SENT_ID_TTL_MS = 5 * 60 * 1000;
@@ -37,6 +38,14 @@ function extractMessageContent(msg) {
       kind: 'image',
       mimeType: m.imageMessage.mimetype || 'image/jpeg',
       caption: m.imageMessage.caption || '',
+    };
+  }
+
+  if (m.audioMessage) {
+    return {
+      kind: 'audio',
+      mimeType: m.audioMessage.mimetype || 'audio/ogg',
+      seconds: m.audioMessage.seconds || null,
     };
   }
 
@@ -114,6 +123,36 @@ export async function handleIncomingMessage(event) {
 
     userMessageForMemory = `[imagem]${content.caption ? ' ' + content.caption : ''}`;
     hasImage = true;
+  } else if (content.kind === 'audio') {
+    const dur = content.seconds ? ` ${content.seconds}s` : '';
+    console.log(`[in] ${phone}${fromMe ? ' (self)' : ''} [${history.length} ctx]: <audio${dur}> baixando...`);
+
+    const media = await downloadMediaBase64(msg);
+    const base64 = media.base64 || media;
+    if (!base64 || typeof base64 !== 'string') {
+      console.log(`[error] could not download audio`);
+      await sendText(remoteJid, '(não consegui baixar o áudio)');
+      return;
+    }
+
+    let transcription;
+    try {
+      transcription = await transcribeAudio(base64, content.mimeType);
+    } catch (err) {
+      console.log(`[error] whisper: ${err.message}`);
+      await sendText(remoteJid, `(falhei ao transcrever o áudio: ${err.message.slice(0, 100)})`);
+      return;
+    }
+
+    if (!transcription) {
+      await sendText(remoteJid, '(o áudio veio vazio ou inaudível)');
+      return;
+    }
+
+    console.log(`[transcribed] ${transcription.slice(0, 100)}${transcription.length > 100 ? '…' : ''}`);
+
+    userMessageForClaude = transcription;
+    userMessageForMemory = `[áudio${dur}] ${transcription}`;
   }
 
   addMessage(remoteJid, 'user', userMessageForMemory);
