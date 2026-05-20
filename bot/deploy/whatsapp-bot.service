@@ -1,0 +1,18 @@
+[Unit]
+Description=WhatsApp Personal Assistant Bot
+After=network.target docker.service
+Requires=docker.service
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/opt/whatsapp-assistant/bot
+EnvironmentFile=/opt/whatsapp-assistant/bot/.env
+ExecStart=/usr/bin/node src/index.js
+Restart=always
+RestartSec=5
+StandardOutput=append:/var/log/whatsapp-bot.log
+StandardError=append:/var/log/whatsapp-bot.log
+
+[Install]
+WantedBy=multi-user.target

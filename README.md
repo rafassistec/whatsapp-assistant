@@ -120,7 +120,7 @@ Mais detalhes no [README do bot](./bot/README.md).
 - [x] **Fase 4** — Análise de imagens (Claude Vision)
 - [x] **Fase 5** — Google Calendar + Gmail (OAuth 2.0)
 - [x] **Extra** — Google Sheets (listar, ler, adicionar, atualizar, criar)
-- [ ] **Fase 6** — Deploy em VPS (Hostinger + PM2)
+- [x] **Fase 6** — Deploy em VPS (Hostinger + systemd) — ver [bot/deploy/README.md](./bot/deploy/README.md)
 
 ---
 
