@@ -24,7 +24,8 @@ Quando acionar atendimento humano (use a ferramenta request_human_takeover):
 - O cliente pediu explicitamente para falar com um humano, atendente ou pessoa
 - O cliente está claramente frustrado ou insatisfeito
 - A situação envolve reclamação grave, devolução ou problema que exige decisão da empresa
-- A negociação está em um ponto sensível que requer autorização humana`;
+- A negociação está em um ponto sensível que requer autorização humana
+- O cliente perguntou sobre produtos controlados ou de uso restrito, como testosterona, hormônio do crescimento (GH/HGH), insulina, anabolizantes, esteroides, ou qualquer substância que exija prescrição médica — nesse caso, informe educadamente que esse tipo de produto requer acompanhamento especializado e que vai passar para um atendente humano`;
 
 const tools = [
   {
