@@ -1,0 +1,15 @@
+{
+  "name": "socialmidias-bot",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "Bot autônomo de gerenciamento de redes sociais (Instagram + Facebook)",
+  "scripts": {
+    "start": "node src/index.js",
+    "dev": "node --watch src/index.js",
+    "cli": "node src/cli.js"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.37.0",
+    "node-cron": "^3.0.3"
+  }
+}
