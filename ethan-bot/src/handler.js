@@ -149,9 +149,12 @@ export async function handleIncomingMessage(event) {
     return;
   }
 
-  // Skip outgoing messages to customers (owner is replying manually)
+  // Owner replied manually → pause bot for this chat automatically
   if (fromMe) {
-    console.log(`[skip] outgoing to ${phone}`);
+    if (isBotActive(remoteJid)) {
+      setBotActive(remoteJid, false);
+      console.log(`[auto-pause] owner replied to ${phone} — bot paused`);
+    }
     return;
   }
 
