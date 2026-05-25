@@ -1,4 +1,4 @@
-import { askClaude } from './claude.js';
+import { askClaude, askAssistant } from './claude.js';
 import { sendText, downloadMediaBase64 } from './evolution.js';
 import { addMessage, getRecentMessages, isBotActive, setBotActive, getPausedChats } from './db.js';
 import { transcribeAudio } from './whisper.js';
@@ -29,6 +29,12 @@ function normalizeBrPhone(phone) {
 
 function isOwner(phone) {
   return normalizeBrPhone(phone) === normalizeBrPhone(process.env.OWNER_PHONE);
+}
+
+function isBotSelf(phone) {
+  const botPhone = process.env.BOT_PHONE;
+  if (!botPhone) return false;
+  return phone.replace(/\D/g, '') === botPhone.replace(/\D/g, '');
 }
 
 function ownerJid() {
@@ -91,7 +97,7 @@ export async function handleIncomingMessage(event) {
 
   const phone = remoteJid.split('@')[0];
   const fromMe = msg.key?.fromMe === true;
-  const isSelfChat = isOwner(phone);
+  const isSelfChat = fromMe && isBotSelf(phone); // owner messaging the bot's own number
   const messageId = msg.key?.id;
 
   if (fromMe && messageId && sentMessageIds.has(messageId)) {
@@ -99,18 +105,52 @@ export async function handleIncomingMessage(event) {
     return;
   }
 
-  // Owner self-chat: handle admin commands, then fall through to normal bot
-  if (fromMe && isSelfChat) {
+  // Self-chat: owner messaging the bot's own number → personal assistant mode
+  if (isSelfChat) {
     const content = extractMessageContent(msg);
+    if (content.kind === 'unsupported') return;
+
     if (content.kind === 'text') {
       const handled = await handleOwnerCommand(content.text, remoteJid);
       if (handled) return;
-      // Not a command — let the bot respond to the owner's self-chat normally
     }
+
+    const history = getRecentMessages(remoteJid, Number(process.env.MEMORY_WINDOW || 40));
+    let userContent = content.kind === 'text' ? content.text : null;
+    let hasImage = false;
+
+    if (content.kind === 'image') {
+      const media = await downloadMediaBase64(msg);
+      const base64 = media.base64 || media;
+      if (!base64) return;
+      userContent = [
+        { type: 'image', source: { type: 'base64', media_type: content.mimeType, data: base64 } },
+        { type: 'text', text: content.caption || 'O que tem nessa imagem?' },
+      ];
+      hasImage = true;
+    } else if (content.kind === 'audio') {
+      const media = await downloadMediaBase64(msg);
+      const base64 = media.base64 || media;
+      if (!base64) return;
+      try {
+        userContent = await transcribeAudio(base64, content.mimeType);
+      } catch { return; }
+    }
+
+    const memText = typeof userContent === 'string' ? userContent : '[mídia]';
+    addMessage(remoteJid, 'user', memText);
+    console.log(`[self] assistente: ${memText.slice(0, 80)}`);
+
+    const { reply } = await askAssistant(history, userContent, { hasImage });
+    addMessage(remoteJid, 'assistant', reply);
+    const result = await sendText(remoteJid, reply);
+    trackSentId(result?.key?.id);
+    console.log(`[self-out] ${reply.slice(0, 80)}`);
+    return;
   }
 
   // Skip outgoing messages to customers (owner is replying manually)
-  if (fromMe && !isSelfChat) {
+  if (fromMe) {
     console.log(`[skip] outgoing to ${phone}`);
     return;
   }

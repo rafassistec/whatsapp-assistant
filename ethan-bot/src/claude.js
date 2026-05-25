@@ -6,6 +6,8 @@ const MODEL = process.env.CLAUDE_MODEL || 'claude-haiku-4-5-20251001';
 const VISION_MODEL = process.env.CLAUDE_VISION_MODEL || 'claude-sonnet-4-6';
 const MAX_TOOL_ITERATIONS = 4;
 
+const ASSISTANT_PROMPT = `Você é um assistente pessoal inteligente, direto e útil. Responda sempre em português brasileiro. Seja objetivo — respostas curtas quando a pergunta for simples, detalhadas quando necessário. Sem formalidades desnecessárias.`;
+
 const SYSTEM_PROMPT = `Você é Ethan, consultor especialista da Peptídios — empresa que comercializa peptídeos para estética, performance esportiva e bem-estar.
 
 Seu papel é atender clientes no WhatsApp com atenção, empatia e conhecimento. Você ajuda o cliente a entender qual produto é o mais adequado para o objetivo dele e conduz o atendimento até a decisão de compra de forma consultiva, nunca agressiva.
@@ -42,14 +44,38 @@ const tools = [
   },
 ];
 
-function buildSystemPrompt() {
-  const now = new Date();
-  const ts = now.toLocaleString('pt-BR', {
+function timestamp() {
+  return new Date().toLocaleString('pt-BR', {
     timeZone: 'America/Sao_Paulo',
     dateStyle: 'full',
     timeStyle: 'short',
   });
-  return `${SYSTEM_PROMPT}\n\nData e hora atuais: ${ts} (America/Sao_Paulo).`;
+}
+
+function buildEthanPrompt() {
+  return `${SYSTEM_PROMPT}\n\nData e hora atuais: ${timestamp()} (America/Sao_Paulo).`;
+}
+
+function buildAssistantPrompt() {
+  return `${ASSISTANT_PROMPT}\n\nData e hora atuais: ${timestamp()} (America/Sao_Paulo).`;
+}
+
+export async function askAssistant(history, userContent, { hasImage = false } = {}) {
+  const model = hasImage ? VISION_MODEL : MODEL;
+  const messages = [
+    ...history.map((m) => ({ role: m.role, content: m.content })),
+    { role: 'user', content: userContent },
+  ];
+
+  const response = await client.messages.create({
+    model,
+    max_tokens: 1024,
+    system: buildAssistantPrompt(),
+    messages,
+  });
+
+  const text = response.content.find((b) => b.type === 'text')?.text || '(sem resposta)';
+  return { reply: text, takeover: false };
 }
 
 export async function askClaude(history, userContent, { hasImage = false } = {}) {
@@ -63,7 +89,7 @@ export async function askClaude(history, userContent, { hasImage = false } = {})
     const response = await client.messages.create({
       model,
       max_tokens: 1024,
-      system: buildSystemPrompt(),
+      system: buildEthanPrompt(),
       tools,
       messages,
     });
@@ -89,7 +115,7 @@ export async function askClaude(history, userContent, { hasImage = false } = {})
         const farewell = await client.messages.create({
           model,
           max_tokens: 256,
-          system: buildSystemPrompt(),
+          system: buildEthanPrompt(),
           messages,
         });
 
