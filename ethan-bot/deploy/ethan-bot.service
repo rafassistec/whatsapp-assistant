@@ -1,0 +1,18 @@
+[Unit]
+Description=Ethan Hunt Bot — WhatsApp Sales Bot (Peptídios)
+After=network.target docker.service
+Requires=docker.service
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/opt/whatsapp-assistant/ethan-bot
+EnvironmentFile=/opt/whatsapp-assistant/ethan-bot/.env
+ExecStart=/usr/bin/node src/index.js
+Restart=always
+RestartSec=5
+StandardOutput=append:/var/log/ethan-bot.log
+StandardError=append:/var/log/ethan-bot.log
+
+[Install]
+WantedBy=multi-user.target
